@@ -15,24 +15,29 @@ jobs:
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
-          # Bepaal de titel en body met een veilige fallback voor handmatige tests
           TITLE="${RELEASE_NAME:-FunnelX Update - v1.1.4}"
           
           if [ -z "$RELEASE_BODY" ]; then
-            BODY=$'### 🔧 Compatibility Update\n\n* ✅ Updated offsets for the latest game patch\n* ✅ Re-uploaded FunnelX.exe with new memory addresses\n\n**Important:** This update is **required** for FunnelX to work with the current game version. The old .exe will no longer function.'
+            READABLE_BODY=$(cat << 'EOF'
+### 🔧 Compatibility Update
+
+* ✅ Updated offsets for the latest game patch
+* ✅ Re-uploaded FunnelX.exe with new memory addresses
+
+**Important:** This update is **required** for FunnelX to work with the current game version. The old .exe will no longer function.
+EOF
+            )
           else
-            BODY="$RELEASE_BODY"
+            READABLE_BODY="$RELEASE_BODY"
           fi
 
-          # Bouw het volledige bericht op
           MESSAGE="# 📢 $TITLE
 
-$BODY
+$READABLE_BODY
 
 👀 *Keep an eye on this channel for future updates!*
 <@&1530655440357163189>"
-          
-          # Stuur naar Discord via jq met allowed_mentions voor de rol
+
           jq -n \
             --arg content "$MESSAGE" \
             '{content: $content, allowed_mentions: {roles: ["1530655440357163189"]}}' \
