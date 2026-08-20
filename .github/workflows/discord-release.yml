@@ -29,6 +29,11 @@ jobs:
               "allowed_mentions": {"roles": ["1530655440357163189"]}
           }).encode("utf-8")
 
-          req = urllib.request.Request(webhook, data=payload, headers={"Content-Type": "application/json"})
+          headers = {
+              "Content-Type": "application/json",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+          }
+
+          req = urllib.request.Request(webhook, data=payload, headers=headers)
           urllib.request.urlopen(req)
           '
