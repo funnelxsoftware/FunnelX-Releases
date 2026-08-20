@@ -15,7 +15,25 @@ jobs:
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
-          MESSAGE="# 📢 $RELEASE_NAME\n\n$RELEASE_BODY\n\n👀 *Keep an eye on this channel for future updates!*\n<@&1530655440357163189>"
+          # Fallback voor handmatige tests met echte regeleinden
+          TITLE="${RELEASE_NAME:-FunnelX Update - v1.1.4}"
+          BODY="${RELEASE_BODY:-### 🔧 Compatibility Update\n\n* ✅ Updated offsets for the latest game patch\n* ✅ Re-uploaded FunnelX.exe with new memory addresses\n\n**Important:** This update is **required** for FunnelX to work with the current game version. The old .exe will no longer function.}"
           
-          jq -n --arg content "$MESSAGE" '{content: $content}' > payload.json
+          # Vervang eventuele letterlijke \n uit github body text naar echte enters in de shell
+          FORMATTED_BODY=$(echo -e "$BODY")
+
+          # Bouw het volledige bericht exact zoals gewenst
+          MESSAGE="# 📢 $TITLE
+
+$FORMATTED_BODY
+
+👀 *Keep an eye on this channel for future updates!*
+<@&1530655440357163189>"
+          
+          # Stuur naar Discord met allowed_mentions voor de rol-ping
+          jq -n \
+            --arg content "$MESSAGE" \
+            '{content: $content, allowed_mentions: {roles: ["1530655440357163189"]}}' \
+            > payload.json
+            
           curl -H "Content-Type: application/json" -d @payload.json $DISCORD_WEBHOOK
