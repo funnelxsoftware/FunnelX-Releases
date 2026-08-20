@@ -72,6 +72,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || echo "Geen rebase nodig"
           git add last_build_id.txt
           git commit -m "Auto-update: Nieuw Steam Build ID opgeslagen" || echo "Geen nieuwe updates om te pushen"
           git push
