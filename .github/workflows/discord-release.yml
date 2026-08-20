@@ -15,32 +15,20 @@ jobs:
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
-          TITLE="${RELEASE_NAME:-FunnelX Update - v1.1.4}"
-          
-          if [ -z "$RELEASE_BODY" ]; then
-            READABLE_BODY=$(cat << 'EOF'
-### 🔧 Compatibility Update
+          python3 -c '
+          import os, json, urllib.request
 
-* ✅ Updated offsets for the latest game patch
-* ✅ Re-uploaded FunnelX.exe with new memory addresses
+          webhook = os.getenv("DISCORD_WEBHOOK")
+          name = os.getenv("RELEASE_NAME") or "FunnelX Update - v1.1.4"
+          body = os.getenv("RELEASE_BODY") or "### 🔧 Compatibility Update\n\n* ✅ Updated offsets for the latest game patch\n* ✅ Re-uploaded FunnelX.exe with new memory addresses\n\n**Important:** This update is **required** for FunnelX to work with the current game version. The old .exe will no longer function."
 
-**Important:** This update is **required** for FunnelX to work with the current game version. The old .exe will no longer function.
-EOF
-            )
-          else
-            READABLE_BODY="$RELEASE_BODY"
-          fi
+          message = f"# 📢 {name}\n\n{body}\n\n👀 *Keep an eye on this channel for future updates!*\n<@&1530655440357163189>"
 
-          MESSAGE="# 📢 $TITLE
+          payload = json.dumps({
+              "content": message,
+              "allowed_mentions": {"roles": ["1530655440357163189"]}
+          }).encode("utf-8")
 
-$READABLE_BODY
-
-👀 *Keep an eye on this channel for future updates!*
-<@&1530655440357163189>"
-
-          jq -n \
-            --arg content "$MESSAGE" \
-            '{content: $content, allowed_mentions: {roles: ["1530655440357163189"]}}' \
-            > payload.json
-            
-          curl -H "Content-Type: application/json" -d @payload.json $DISCORD_WEBHOOK
+          req = urllib.request.Request(webhook, data=payload, headers={"Content-Type": "application/json"})
+          urllib.request.urlopen(req)
+          '
