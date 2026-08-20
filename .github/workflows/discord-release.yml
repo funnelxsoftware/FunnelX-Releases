@@ -1,0 +1,20 @@
+name: Discord Release Notifier
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Webhook
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          MESSAGE="# 📢 $RELEASE_NAME\n\n$RELEASE_BODY\n\n👀 *Keep an eye on this channel for future updates!*\n<@&1530655440357163189>"
+          
+          jq -n --arg content "$MESSAGE" '{content: $content}' > payload.json
+          curl -H "Content-Type: application/json" -d @payload.json $DISCORD_WEBHOOK
