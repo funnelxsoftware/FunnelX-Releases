@@ -12,6 +12,7 @@ jobs:
       - name: Send Discord Webhook
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
           python3 -c '
@@ -19,12 +20,16 @@ jobs:
 
           webhook = os.getenv("DISCORD_WEBHOOK")
           
-          # Pakt automatisch jouw ingevulde Release Notes van GitHub
+          # Pakt de titel van de release (of een fallback voor de handmatige test)
+          release_title = os.getenv("RELEASE_NAME")
+          name = release_title if release_title else "FunnelX v1.1.4 — Compatibility Update"
+          
+          # Pakt de release notes (of een fallback voor de handmatige test)
           fallback_body = "### 🔧 Compatibility Update\n\n* ✅ Updated offsets for the latest game patch\n* ✅ Re-uploaded FunnelX.exe with new memory addresses\n\n**Important:** This update is **required** for FunnelX to work with the current game version. The old .exe will no longer function."
           body = os.getenv("RELEASE_BODY") or fallback_body
 
-          # Plakt jouw vaste footer onder jouw Release Notes
-          message = f"{body}\n\n👀 *Keep an eye on this channel for future updates!*\n<@&1530655440357163189>"
+          # Bouwt het bericht op: 📢 Titel + Body + Footer
+          message = f"# 📢 {name}\n\n{body}\n\n👀 *Keep an eye on this channel for future updates!*\n<@&1530655440357163189>"
 
           payload = json.dumps({
               "content": message,
