@@ -1,0 +1,48 @@
+name: 🚨 Send Game Update Alert
+
+on:
+  workflow_dispatch:
+    inputs:
+      extra_message:
+        description: 'Extra informatie (optioneel, bv. "Verwachte downtime is 2 uur")'
+        required: false
+        default: ''
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Announcement Webhook
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_ANNOUNCEMENT_WEBHOOK_URL }}
+          EXTRA_MESSAGE: ${{ github.event.inputs.extra_message }}
+        run: |
+          python3 -c '
+          import os, json, urllib.request
+
+          webhook = os.getenv("DISCORD_WEBHOOK")
+          extra_info = os.getenv("EXTRA_MESSAGE")
+          
+          # Bouw de vaste professionele waarschuwing op
+          body = "### ⚠️ Game Update Gedetecteerd\n\nEr is zojuist een nieuwe patch voor de game uitgebracht. Hierdoor komen de huidige memory offsets van FunnelX niet meer overeen met de game.\n\n**Wat betekent dit voor jou?**\n* ❌ FunnelX zal tijdelijk niet werken of direct crashen.\n* ⏳ Gebruik de tool tijdelijk niet totdat er een nieuwe update in het patch-notes kanaal is geplaatst.\n\nWe zijn bezig met het scannen van de nieuwe offsets en brengen zo snel mogelijk een update uit. Bedankt voor jullie geduld!"
+          
+          # Voeg optionele extra tekst toe als je die hebt ingevuld
+          if extra_info:
+              body += f"\n\n**Extra update:** *{extra_info}*"
+
+          # Combineer alles inclusief de rol-ping
+          message = f"# 📢 Let op!\n\n{body}\n\n<@&1530655440357163189>"
+
+          payload = json.dumps({
+              "content": message,
+              "allowed_mentions": {"roles": ["1530655440357163189"]}
+          }).encode("utf-8")
+
+          headers = {
+              "Content-Type": "application/json",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+          }
+
+          req = urllib.request.Request(webhook, data=payload, headers=headers)
+          urllib.request.urlopen(req)
+          '
