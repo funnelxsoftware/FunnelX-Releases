@@ -1,0 +1,78 @@
+name: 🔄 Auto-Check Game Updates
+
+on:
+  schedule:
+    # Draait automatisch elk uur (op minuut 0)
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Nodig om het last_build_id.txt bestand bij te werken
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Controleer Steam API en verstuur Discord melding
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_ANNOUNCEMENT_WEBHOOK_URL }}
+        run: |
+          python3 -c '
+          import os, json, urllib.request
+
+          app_id = "3712080"
+          url = f"https://api.steamcmd.net/v1/info/{app_id}"
+          build_file = "last_build_id.txt"
+
+          # 1. Haal de allernieuwste data van de game op via Steam
+          req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+          try:
+              response = urllib.request.urlopen(req).read().decode("utf-8")
+              data = json.loads(response)
+              new_build = data["data"][app_id]["depots"]["branches"]["public"]["buildid"]
+          except Exception as e:
+              print(f"Kon de Steam API niet bereiken of parsen: {e}")
+              exit(1)
+
+          # 2. Lees het oude Build ID (als het bestand bestaat)
+          old_build = ""
+          if os.path.exists(build_file):
+              with open(build_file, "r") as f:
+                  old_build = f.read().strip()
+
+          # 3. Vergelijk de IDs
+          if old_build == new_build:
+              print(f"Geen update gedetecteerd. Huidige Steam Build: {new_build}")
+          else:
+              if old_build != "":
+                  print(f"Game update gedetecteerd! Van {old_build} naar {new_build}. Verstuur Discord alert...")
+                  webhook = os.getenv("DISCORD_WEBHOOK")
+                  
+                  body = f"### ⚠️ Game Update Detected\n\nA new patch has just been released for the game (Steam Build ID: `{new_build}`). Because of this, the current memory offsets for FunnelX are no longer compatible.\n\n**What does this mean for you?**\n* ❌ FunnelX will temporarily not work or may crash.\n* ⏳ Please do not use the tool until a new update is posted in the patch-notes channel.\n\nWe are currently scanning for the new offsets and will release an update as soon as possible. Thank you for your patience!"
+                  message = f"# 📢 Attention!\n\n{body}\n\n<@&1530655440357163189>"
+                  
+                  payload = json.dumps({
+                      "content": message,
+                      "allowed_mentions": {"roles": ["1530655440357163189"]}
+                  }).encode("utf-8")
+                  
+                  req_post = urllib.request.Request(webhook, data=payload, headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"})
+                  urllib.request.urlopen(req_post)
+              else:
+                  print(f"Eerste keer draaien. Ik sla Build ID {new_build} op zonder een waarschuwing te sturen.")
+              
+              # Sla het nieuwe Build ID op
+              with open(build_file, "w") as f:
+                  f.write(new_build)
+          '
+
+      - name: Sla de wijziging op in GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add last_build_id.txt
+          # Commit alleen als het bestand daadwerkelijk is gewijzigd
+          git commit -m "Auto-update: Nieuw Steam Build ID opgeslagen" || echo "Geen nieuwe updates om te pushen"
+          git push
