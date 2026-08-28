@@ -50,6 +50,10 @@ jobs:
                   print(f"Game update gedetecteerd! Van {old_build} naar {new_build}. Verstuur Discord alert...")
                   webhook = os.getenv("DISCORD_WEBHOOK")
                   
+                  if not webhook:
+                      print("FOUT: DISCORD_ANNOUNCEMENT_WEBHOOK_URL secret is niet gevonden of is leeg op GitHub!")
+                      exit(1)
+                  
                   body = f"### ⚠️ Game Update Detected\n\nA new patch has just been released for the game (Steam Build ID: `{new_build}`). Because of this, the current memory offsets for FunnelX are no longer compatible.\n\n**What does this mean for you?**\n* ❌ FunnelX will temporarily not work or may crash.\n* ⏳ Please do not use the tool until a new update is posted in the patch-notes channel.\n\nWe are currently scanning for the new offsets and will release an update as soon as possible. Thank you for your patience!"
                   message = f"# 📢 Attention!\n\n{body}\n\n<@&1530655440357163189>"
                   
